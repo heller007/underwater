@@ -24,6 +24,7 @@ def train_yolo(
     run_dir: Path,
     device: str | None = None,
     resume: bool | str = False,
+    quiet: bool = False,
 ) -> dict[str, Any]:
     """
     Train YOLOv8 with Ultralytics. On dual T4, pass device='0,1'.
@@ -31,16 +32,37 @@ def train_yolo(
     """
     from ultralytics import YOLO
 
+    from src.common.quiet import progress, silence_ultralytics
+
+    if quiet:
+        silence_ultralytics()
+
     device = resolve_device(device if device is not None else cfg.get("device", "auto"))
     model_name = cfg.get("model", "yolov8n.pt")
     model = YOLO(model_name)
 
     project = str(run_dir)
     name = "train"
+    epochs = int(cfg.get("epochs", 100))
+
+    if quiet:
+
+        def _on_fit_epoch_end(trainer):  # type: ignore[no-untyped-def]
+            ep = int(getattr(trainer, "epoch", 0)) + 1
+            metrics = getattr(trainer, "metrics", {}) or {}
+            # Prefer common keys if present
+            map50 = metrics.get("metrics/mAP50(B)", metrics.get("mAP50"))
+            map5095 = metrics.get("metrics/mAP50-95(B)", metrics.get("mAP50-95"))
+            if map50 is not None and map5095 is not None:
+                progress(f"[train] epoch {ep}/{epochs}  mAP50={float(map50):.4f}  mAP50-95={float(map5095):.4f}")
+            else:
+                progress(f"[train] epoch {ep}/{epochs} done")
+
+        model.add_callback("on_fit_epoch_end", _on_fit_epoch_end)
 
     train_kwargs = dict(
         data=str(data_yaml),
-        epochs=int(cfg.get("epochs", 100)),
+        epochs=epochs,
         patience=int(cfg.get("patience", 20)),
         batch=int(cfg.get("batch", 16)),
         imgsz=int(cfg.get("imgsz", 640)),
@@ -72,12 +94,14 @@ def train_yolo(
         exist_ok=True,
         device=device,
         save=True,
-        plots=True,
-        verbose=True,
+        plots=not quiet,
+        verbose=not quiet,
     )
     if resume:
         train_kwargs["resume"] = resume if isinstance(resume, str) else True
 
+    if quiet:
+        progress(f"[train] starting {epochs} epochs on device={device}")
     results = model.train(**train_kwargs)
     save_dir = Path(project) / name
     best = save_dir / "weights" / "best.pt"
@@ -91,7 +115,6 @@ def train_yolo(
         "model": model_name,
         "data_yaml": str(data_yaml),
     }
-    # Ultralytics results may expose maps
     try:
         if hasattr(results, "results_dict"):
             summary["train_results"] = dict(results.results_dict)
@@ -101,6 +124,8 @@ def train_yolo(
         pass
 
     save_json(run_dir / "train_summary.json", summary)
+    if quiet:
+        progress(f"[train] done best={summary.get('best_weights')}")
     return summary
 
 
@@ -112,26 +137,33 @@ def predict_split(
     imgsz: int = 640,
     device: str | None = None,
     conf: float = 0.001,
+    quiet: bool = False,
 ) -> dict[str, Any]:
     """Run validation-style evaluation on a named split via Ultralytics."""
     from ultralytics import YOLO
+
+    from src.common.quiet import progress, silence_ultralytics
+
+    if quiet:
+        silence_ultralytics()
+        progress(f"[eval] split={split}")
 
     device = resolve_device(device)
     model = YOLO(str(weights))
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Ultralytics val() uses data.yaml train/val; for test we temporarily point val->test
     metrics = model.val(
         data=str(data_yaml),
         split=split if split in ("train", "val", "test") else "val",
         imgsz=imgsz,
         device=device,
         conf=conf,
-        plots=True,
+        plots=not quiet,
         save_json=True,
         project=str(out_dir),
         name=f"val_{split}",
         exist_ok=True,
+        verbose=not quiet,
     )
 
     out: dict[str, Any] = {"split": split, "weights": str(weights)}
@@ -147,4 +179,9 @@ def predict_split(
     except Exception as e:
         out["metrics_error"] = str(e)
     save_json(out_dir / f"metrics_{split}.json", out)
+    if quiet and "metrics" in out:
+        m = out["metrics"]
+        progress(
+            f"[eval] {split}: mAP50={m['mAP50']:.4f} mAP50-95={m['mAP50_95']:.4f}"
+        )
     return out

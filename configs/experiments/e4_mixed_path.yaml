@@ -1,7 +1,14 @@
 experiment_id: e4_mixed_path
 stage: e4
-description: "Train shared detector sampling raw + shortlisted enhanced views"
+description: "Shared detector trained with one deterministic action per image from {T0,T4}"
 depends_on: e3_fixed_path
+actions: [T0, T4]
 held_out_site: Lokrum
 seed: 0
-status: scaffolded
+detector:
+  config: configs/detector/yolov8n_raw.yaml
+  epochs: 100
+  patience: 20
+  batch: 32
+  imgsz: 640
+status: ready

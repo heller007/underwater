@@ -8,6 +8,7 @@ Stages:
   e1     - prep (if needed) + full baseline train + eval
   e2     - naive test-time enhancement on frozen E1 weights
   e3     - fixed-path train/eval for shortlisted actions (T0/T2/T4)
+  e4     - mixed-path detector (T0+T4); quiet progress by default
 """
 
 from __future__ import annotations
@@ -49,7 +50,7 @@ def _latest_e1_weights(runs_root: Path, site: str) -> Path | None:
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--stage", choices=["smoke", "prep", "e1", "e2", "e3"], required=True)
+    p.add_argument("--stage", choices=["smoke", "prep", "e1", "e2", "e3", "e4"], required=True)
     p.add_argument("--env", default=None)
     p.add_argument("--seaclear-root", default=None)
     p.add_argument("--held-out-site", default="Lokrum")
@@ -59,12 +60,13 @@ def main() -> None:
     p.add_argument(
         "--weights",
         default=None,
-        help="For e2/e3: path to E1 best.pt",
+        help="For e2/e3: path to E1/E3 best.pt",
     )
     p.add_argument("--drop-enhanced", action="store_true")
-    p.add_argument("--actions", default=None, help="For e3: e.g. T2,T4 or T0,T2,T4")
+    p.add_argument("--actions", default=None, help="For e3/e4: e.g. T0,T4")
     p.add_argument("--epochs", type=int, default=None)
     p.add_argument("--batch", type=int, default=None)
+    p.add_argument("--no-quiet", action="store_true")
     args = p.parse_args()
 
     py = sys.executable
@@ -72,6 +74,47 @@ def main() -> None:
     sc_args = ["--seaclear-root", args.seaclear_root] if args.seaclear_root else []
     site_args = ["--held-out-site", args.held_out_site]
     max_args = ["--max-images", str(args.max_images)] if args.max_images else []
+
+    # ---- E4 mixed-path ----
+    if args.stage == "e4":
+        from src.common import load_env
+
+        env = load_env(args.env)
+        yolo = env.processed_root / f"yolo_loso_{args.held_out_site.lower()}" / "data.yaml"
+        if not yolo.exists():
+            print("YOLO data missing; running prep first...", flush=True)
+            run(
+                [
+                    py,
+                    "scripts/run_stage.py",
+                    "--stage",
+                    "prep",
+                    *env_args,
+                    *sc_args,
+                    *site_args,
+                ]
+            )
+        cmd = [
+            py,
+            "scripts/run_mixed_path.py",
+            *env_args,
+            *site_args,
+        ]
+        if args.actions:
+            cmd += ["--actions", args.actions]
+        if args.device:
+            cmd += ["--device", args.device]
+        if args.epochs is not None:
+            cmd += ["--epochs", str(args.epochs)]
+        if args.batch is not None:
+            cmd += ["--batch", str(args.batch)]
+        if args.drop_enhanced:
+            cmd += ["--drop-enhanced"]
+        if args.no_quiet:
+            cmd += ["--no-quiet"]
+        run(cmd)
+        print("E4 complete.")
+        return
 
     # ---- E3 fixed-path ----
     if args.stage == "e3":
