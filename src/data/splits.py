@@ -79,13 +79,20 @@ def contamination_check(df: pd.DataFrame) -> dict[str, Any]:
         leakage_to_source = int(
             ((df["site"].str.lower() == str(test_site).lower()) & (df["split"] != "test")).sum()
         )
+    # JSON-safe keys only (groupby multi-index yields tuple keys)
+    site_by_split = {
+        f"{split}|{site}": int(count)
+        for (split, site), count in df.groupby(["split", "site"]).size().items()
+    }
+    split_counts = {str(k): int(v) for k, v in df["split"].value_counts().to_dict().items()}
+    contaminated_sample = {str(k): int(v) for k, v in bad.head(20).to_dict().items()}
     return {
         "n_contaminated_groups": int(len(bad)),
-        "contaminated_groups_sample": bad.head(20).to_dict(),
+        "contaminated_groups_sample": contaminated_sample,
         "test_site_leakage_count": leakage_to_source,
         "pass": len(bad) == 0 and leakage_to_source == 0,
-        "split_counts": df["split"].value_counts().to_dict(),
-        "site_by_split": df.groupby(["split", "site"]).size().to_dict(),
+        "split_counts": split_counts,
+        "site_by_split": site_by_split,
     }
 
 

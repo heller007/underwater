@@ -40,6 +40,10 @@ def test_loso_no_contamination():
     assert check["pass"]
     assert (df[df["site"] == "C"]["split"] == "test").all()
     assert (df[df["split"] == "test"]["site"] == "C").all()
+    # JSON-serializable keys
+    import json
+
+    json.dumps(check)
 
 
 def test_groups_single_split():
