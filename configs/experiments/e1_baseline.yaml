@@ -1,0 +1,22 @@
+experiment_id: e1_baseline
+stage: e1
+description: "Raw YOLOv8n baseline on development LOSO fold"
+held_out_site: Lokrum
+seed: 0
+max_images: null
+detector:
+  config: configs/detector/yolov8n_raw.yaml
+  epochs: 100
+  patience: 20
+  batch: 32
+  imgsz: 640
+action: T0
+evaluate_splits:
+  - val
+  - test
+# Placeholders for later stages (not executed in Phase 1)
+future_stages:
+  - e2_naive_enhance
+  - e3_fixed_path
+  - e4_mixed_path
+  - e5_oracle

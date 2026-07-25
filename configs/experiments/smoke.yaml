@@ -1,0 +1,16 @@
+experiment_id: smoke
+stage: smoke
+description: "100 images, 2 epochs, verify dual-GPU and I/O"
+held_out_site: Lokrum
+seed: 0
+max_images: 100
+detector:
+  config: configs/detector/yolov8n_raw.yaml
+  epochs: 2
+  patience: 2
+  batch: 16
+  imgsz: 640
+action: T0
+evaluate_splits:
+  - val
+  - test

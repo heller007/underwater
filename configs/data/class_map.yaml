@@ -1,0 +1,57 @@
+# SeaClear fine categories → supercategories used in main experiments.
+# Categories listed under ignore are dropped (never remapped incorrectly).
+supercategories:
+  debris: 0
+  bio: 1
+  robot: 2
+
+# Official SeaClear supercategory names → our labels
+seaclear_supercategory_map:
+  debris: debris
+  litter: debris
+  bio: bio
+  biological: bio
+  animal: bio
+  plant: bio
+  vegetation: bio
+  robot: robot
+  rov: robot
+
+# Fine-grained overrides when supercategory metadata is missing/ambiguous.
+# Keys are lowercase category names as they appear in COCO.
+fine_to_super:
+  # debris examples (extend after audit inspects actual names)
+  plastic: debris
+  bottle: debris
+  can: debris
+  bag: debris
+  tire: debris
+  rope: debris
+  net: debris
+  # bio
+  fish: bio
+  sea_urchin: bio
+  seagrass: bio
+  algae: bio
+  # robot
+  rov: robot
+  robot: robot
+  manipulator: robot
+  tether: robot
+
+ignore:
+  - unknown
+  - ambiguous
+  - other
+
+# TrashCan external mapping (used only at E11; not for training)
+trashcan_binary:
+  trash: debris
+  bio: non_debris
+  rov: non_debris
+
+trashcan_three_class:
+  trash: debris
+  bio: bio
+  rov: robot
+  unknown: ignore

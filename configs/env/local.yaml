@@ -1,0 +1,13 @@
+name: local
+data_root: data/raw
+seaclear_root: data/raw/seaclear
+trashcan_root: data/raw/trashcan
+processed_root: data/processed
+manifests_root: data/manifests
+reports_root: reports
+runs_root: runs
+paper_assets_root: paper_assets
+# device: auto | cpu | 0 | "0,1"
+device: auto
+num_workers: 4
+pin_memory: true

@@ -1,0 +1,7 @@
+experiment_id: e4_mixed_path
+stage: e4
+description: "Train shared detector sampling raw + shortlisted enhanced views"
+depends_on: e3_fixed_path
+held_out_site: Lokrum
+seed: 0
+status: scaffolded

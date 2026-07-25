@@ -1,0 +1,8 @@
+experiment_id: e3_fixed_path
+stage: e3
+description: "Train one detector per shortlisted action consistently"
+depends_on: e1_baseline
+actions: [T0, T1, T2, T3, T4]
+held_out_site: Lokrum
+seed: 0
+status: scaffolded

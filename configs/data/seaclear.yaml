@@ -1,0 +1,23 @@
+dataset_name: seaclear
+annotation_format: coco
+image_extensions: [".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"]
+sites:
+  - Bistrina
+  - Jakljan
+  - Lokrum
+  - Slano
+  - Marseille
+# Development fold for pilot / E1
+dev_held_out_site: Lokrum
+# Within source sites: detector / gate / calibration
+split_ratios:
+  detector_train: 0.70
+  gate_train: 0.15
+  calibration: 0.15
+split_seed: 0
+# Prefer grouping by these keys when present in paths/filenames
+group_priority:
+  - sequence
+  - camera
+  - site_camera
+  - perceptual_hash_cluster

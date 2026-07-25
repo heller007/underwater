@@ -1,0 +1,9 @@
+experiment_id: e5_oracle
+stage: e5
+description: "Oracle action study on frozen mixed detector — go/no-go for routing"
+depends_on: e4_mixed_path
+held_out_site: Lokrum
+seed: 0
+delta: 0.01
+lambda_cost: 0.05
+status: scaffolded

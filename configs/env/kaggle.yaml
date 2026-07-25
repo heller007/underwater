@@ -1,0 +1,27 @@
+name: kaggle
+# Override seaclear_root after attaching your Kaggle Dataset.
+# Common layouts (first existing path wins via auto-discovery):
+#   /kaggle/input/seaclear-marine-debris-detection-and-segmentation
+#   /kaggle/input/<your-dataset-slug>
+data_root: /kaggle/input
+seaclear_root: null  # resolved by discovery
+trashcan_root: null  # resolved by discovery
+processed_root: /kaggle/working/processed
+manifests_root: /kaggle/working/manifests
+reports_root: /kaggle/working/reports
+runs_root: /kaggle/working/runs
+paper_assets_root: /kaggle/working/paper_assets
+# Dual T4 GPUs
+device: "0,1"
+num_workers: 2
+pin_memory: true
+# Candidate input dataset directory names for discovery
+seaclear_candidates:
+  - seaclear-marine-debris-detection-and-segmentation
+  - seaclear-marine-debris-dataset
+  - seaclear
+  - Seaclear-Marine-Debris-Dataset
+trashcan_candidates:
+  - trashcan
+  - trashcan-dataset
+  - TrashCan
