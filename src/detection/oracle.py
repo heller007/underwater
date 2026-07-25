@@ -251,22 +251,58 @@ def run_e5_oracle(
 
     for split in splits:
         progress(f"[e5] === split {split} ===")
-        # Materialize each action
+        # Materialize each action into a YOLO-compatible layout (alias non-standard
+        # names like 'gate' to images/val for Ultralytics).
+        yolo_alias = "val" if split == "gate" else ("test" if split == "test" else split)
+        if yolo_alias not in ("train", "val", "test"):
+            yolo_alias = "val"
+
         img_dirs: dict[str, Path] = {}
         preds: dict[str, dict[str, list[Box]]] = {}
         for a in actions:
             progress(f"[e5] materialize {a}/{split}")
             root = out_dir / f"enhanced_{a}_{split}"
+            # Write files under the alias folder name Ultralytics understands
             materialize_enhanced_split(src_yolo_root, root, a, splits=(split,))
-            img_dirs[a] = root / "images" / split
+            # If source split name != alias, move/rename folder
+            src_img = root / "images" / split
+            dst_img = root / "images" / yolo_alias
+            src_lbl = root / "labels" / split
+            dst_lbl = root / "labels" / yolo_alias
+            if split != yolo_alias and src_img.exists():
+                if dst_img.exists():
+                    import shutil
+
+                    shutil.rmtree(dst_img, ignore_errors=True)
+                    shutil.rmtree(dst_lbl, ignore_errors=True)
+                src_img.rename(dst_img)
+                if src_lbl.exists():
+                    src_lbl.rename(dst_lbl)
+            # Rewrite data.yaml for single-split eval
+            data_yaml = {
+                "path": str(root.resolve()),
+                "train": f"images/{yolo_alias}",
+                "val": f"images/{yolo_alias}",
+                "test": f"images/{yolo_alias}",
+                "names": {0: "debris", 1: "bio", 2: "robot"},
+                "nc": 3,
+            }
+            with open(root / "data.yaml", "w", encoding="utf-8") as f:
+                yaml.safe_dump(data_yaml, f, sort_keys=False)
+            img_dirs[a] = root / "images" / yolo_alias
             preds[a] = _predict_folder(weights, img_dirs[a], conf=conf, device=device)
 
         gt_dir = src_yolo_root / "labels" / split
-        # stems from labels
         stems = sorted({p.stem for p in gt_dir.glob("*.txt")})
-        # also include images with empty labels
         for a, d in img_dirs.items():
-            stems = sorted(set(stems) | {p.stem for p in d.glob("*.*") if p.suffix.lower() in {".jpg", ".jpeg", ".png"}})
+            stems = sorted(
+                set(stems)
+                | {
+                    p.stem
+                    for p in d.glob("*.*")
+                    if p.suffix.lower() in {".jpg", ".jpeg", ".png"}
+                }
+            )
 
         progress(f"[e5] utilities for {len(stems)} images")
         table = build_oracle_table(
@@ -285,14 +321,13 @@ def run_e5_oracle(
         harm_rate = float(table["t4_harms"].mean()) if "t4_harms" in table.columns else None
         help_rate = float(table["t4_helps"].mean()) if "t4_helps" in table.columns else None
 
-        # Fixed-path eval on this detector
         fixed_metrics = {}
         for a in actions:
             data_yaml = out_dir / f"enhanced_{a}_{split}" / "data.yaml"
             m = predict_split(
                 weights=weights,
                 data_yaml=data_yaml,
-                split=split,
+                split=yolo_alias,
                 out_dir=out_dir / f"eval_fixed_{a}_{split}",
                 device=device,
                 quiet=True,
@@ -300,14 +335,15 @@ def run_e5_oracle(
             )
             fixed_metrics[a] = m.get("metrics", m)
 
-        # Oracle dataset eval
         progress(f"[e5] materialize oracle images ({split})")
         ora_root = out_dir / f"oracle_ds_{split}"
-        ora_yaml = materialize_oracle_images(table, img_dirs, gt_dir, ora_root, split_name=split)
+        ora_yaml = materialize_oracle_images(
+            table, img_dirs, gt_dir, ora_root, split_name=yolo_alias
+        )
         ora_m = predict_split(
             weights=weights,
             data_yaml=ora_yaml,
-            split=split,
+            split=yolo_alias,
             out_dir=out_dir / f"eval_oracle_{split}",
             device=device,
             quiet=True,
@@ -316,7 +352,11 @@ def run_e5_oracle(
         oracle_metrics = ora_m.get("metrics", ora_m)
 
         best_fixed = max(
-            (fixed_metrics[a].get("mAP50", 0.0) for a in actions if isinstance(fixed_metrics.get(a), dict)),
+            (
+                fixed_metrics[a].get("mAP50", 0.0)
+                for a in actions
+                if isinstance(fixed_metrics.get(a), dict)
+            ),
             default=0.0,
         )
         decision = go_no_go(
@@ -328,8 +368,11 @@ def run_e5_oracle(
 
         split_summary = {
             "n_images": len(table),
+            "yolo_alias": yolo_alias,
             "oracle_action_counts": dict(counts),
-            "oracle_action_fractions": {k: v / max(len(table), 1) for k, v in counts.items()},
+            "oracle_action_fractions": {
+                k: v / max(len(table), 1) for k, v in counts.items()
+            },
             "mean_error": {a: float(table[f"error_{a}"].mean()) for a in actions},
             "mean_utility": {a: float(table[f"utility_{a}"].mean()) for a in actions},
             "t4_harm_rate": harm_rate,
