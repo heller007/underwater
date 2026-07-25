@@ -9,6 +9,7 @@ Stages:
   e2     - naive test-time enhancement on frozen E1 weights
   e3     - fixed-path train/eval for shortlisted actions (T0/T2/T4)
   e4     - mixed-path detector (T0+T4); quiet progress by default
+  e5     - oracle study on frozen mixed detector (go/no-go)
 """
 
 from __future__ import annotations
@@ -50,7 +51,7 @@ def _latest_e1_weights(runs_root: Path, site: str) -> Path | None:
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--stage", choices=["smoke", "prep", "e1", "e2", "e3", "e4"], required=True)
+    p.add_argument("--stage", choices=["smoke", "prep", "e1", "e2", "e3", "e4", "e5"], required=True)
     p.add_argument("--env", default=None)
     p.add_argument("--seaclear-root", default=None)
     p.add_argument("--held-out-site", default="Lokrum")
@@ -74,6 +75,47 @@ def main() -> None:
     sc_args = ["--seaclear-root", args.seaclear_root] if args.seaclear_root else []
     site_args = ["--held-out-site", args.held_out_site]
     max_args = ["--max-images", str(args.max_images)] if args.max_images else []
+
+    # ---- E5 oracle ----
+    if args.stage == "e5":
+        from src.common import load_env
+
+        env = load_env(args.env)
+        weights = Path(args.weights) if args.weights else None
+        if weights is None or not Path(str(weights)).exists():
+            # try latest e4 mixed run
+            runs = sorted(
+                env.runs_root.glob(f"fold-{args.held_out_site.lower()}_model-mixed_*"),
+                key=lambda p: p.stat().st_mtime,
+            )
+            weights = None
+            for r in reversed(runs):
+                b = r / "train" / "weights" / "best.pt"
+                if b.exists():
+                    weights = b
+                    break
+        if weights is None or not Path(weights).exists():
+            raise SystemExit(
+                "E5 needs E4 weights. Pass --weights /kaggle/input/.../best.pt"
+            )
+        cmd = [
+            py,
+            "scripts/run_oracle.py",
+            *env_args,
+            *site_args,
+            "--weights",
+            str(weights),
+            "--drop-enhanced",
+        ]
+        if args.actions:
+            cmd += ["--actions", args.actions]
+        if args.device:
+            cmd += ["--device", args.device]
+        if args.no_quiet:
+            cmd += ["--no-quiet"]
+        run(cmd)
+        print("E5 complete.")
+        return
 
     # ---- E4 mixed-path ----
     if args.stage == "e4":
