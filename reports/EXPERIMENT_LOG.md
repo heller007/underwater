@@ -17,7 +17,8 @@ Update this file after every stage. Every number must trace to a run folder / ar
 | E1 | `fold-lokrum_model-t0_exp-e1_baseline_seed-0_20260725T084249Z` | Also mirrored as Kaggle dataset `pandeyvineet/e1weights` |
 | E2 | `fold-lokrum_model-e1frozen_exp-e2_naive_enhance_seed-0_20260725T103126Z` | See `e2/e2_results.json` |
 | E3 | `fold-lokrum_model-fixed_exp-e3_fixed_path_seed-0_20260725T112111Z` | T4 weights saved; T2 metrics from log after freeze |
-| E4 | *next* | Mixed-path detector |
+| E4 | `fold-lokrum_model-mixed_exp-e4_mixed_path_seed-0_20260725T144908Z` | Mixed T0+T4; see `e4_results.json` |
+| E5 | *next* | Oracle go/no-go |
 
 Split sizes (LOSO Lokrum, full SeaClear): **train 6201 / val 918 / test 972** (8610 images).
 
@@ -159,11 +160,49 @@ E3 provides the **fair fixed-enhancement baselines**. Main comparison for later 
 
 ---
 
+## E4 — Mixed-path detector (shared \(T_0\)+\(T_4\))
+
+### Protocol
+- Each image assigned one action \(\in\{T_0,T_4\}\) deterministically (~50/50)
+- Train one YOLOv8n on mixed train; early-stop on mixed val
+- Eval: mixed val/test + pure \(T_0\) Lokrum test + pure \(T_4\) Lokrum test
+- Run id: `fold-lokrum_model-mixed_exp-e4_mixed_path_seed-0_20260725T144908Z`
+- Mix counts (train): T0 3073 / T4 3128
+
+### Metrics
+
+| Eval setting | mAP50 | mAP50-95 |
+| --- | ---: | ---: |
+| mixed val | 0.457 | 0.311 |
+| mixed test (Lokrum) | 0.179 | 0.131 |
+| **pure T0 test** (Lokrum) | **0.183** | **0.133** |
+| pure T4 test (Lokrum) | 0.177 | 0.128 |
+
+**Per-class test mAP50-95 (E4 on T0 test):** debris 0.023, bio 0.002, robot 0.376  
+
+### Comparison on Lokrum test (mAP50-95)
+
+| System | Input at test | mAP50-95 |
+| --- | --- | ---: |
+| E1 raw | \(T_0\) | 0.041 |
+| E3 fixed T4 | \(T_4\) | **0.157** |
+| E4 mixed | \(T_0\) | 0.133 |
+| E4 mixed | \(T_4\) | 0.128 |
+
+### Findings (paper-ready)
+1. **Mixed training works for both paths:** E4 on raw Lokrum (**0.133**) ≫ E1 raw (**0.041**); on fusion test it is close to, but below, specialist E3-T4 (**0.128** vs **0.157**).
+2. **Specialist still wins when the path is fixed to T4** — expected; the gate/oracle should try to recover part of that +0.029 gap by choosing T4 only when useful.
+3. E4 is the correct **shared backbone** for E5 oracle / E7 gate (can ingest raw or fusion).
+
+### Claim boundary
+E4 is not the final method; it enables selective routing without training separate heads for each action.
+
+---
+
 ## Later stages (planned — not yet run)
 
 | ID | Name | Goal |
 | --- | --- | --- |
-| E4 | Mixed-path detector | Shared detector for gate actions |
 | E5 | Oracle study | Go/no-go for routing (≥ ~2 mAP or clear harm reduction) |
 | E6 | Quality-metric selectors | UCIQE/UIQM baselines |
 | E7 | Learned utility gate | Main method |
@@ -201,3 +240,4 @@ E3 provides the **fair fixed-enhancement baselines**. Main comparison for later 
 | 2026-07-25 | E1 baseline logged from Kaggle run `...T084249Z` |
 | 2026-07-25 | E2 naive enhance logged from run `...T103126Z`; shortlist T0/T2/T4 |
 | 2026-07-25 | E3 fixed-path logged (T0/T2/T4); T4 best on Lokrum test; T2 weights lost in Kaggle freeze but metrics retained from log |
+| 2026-07-25 | E4 mixed-path logged; strong on both T0/T4 test vs E1; below E3-T4 specialist on T4 test |

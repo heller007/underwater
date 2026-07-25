@@ -1,0 +1,88 @@
+{
+  "weights": "/kaggle/working/runs/fold-lokrum_model-mixed_exp-e4_mixed_path_seed-0_20260725T144908Z/train/weights/best.pt",
+  "mixed_stats": {
+    "actions": [
+      "T0",
+      "T4"
+    ],
+    "seed": 0,
+    "splits": {
+      "train": {
+        "T0": 3073,
+        "T4": 3128
+      },
+      "val": {
+        "T0": 480,
+        "T4": 438
+      },
+      "test": {
+        "T0": 478,
+        "T4": 494
+      }
+    }
+  },
+  "train_summary": {
+    "device": "0,1",
+    "save_dir": "/kaggle/working/runs/fold-lokrum_model-mixed_exp-e4_mixed_path_seed-0_20260725T144908Z/train",
+    "best_weights": "/kaggle/working/runs/fold-lokrum_model-mixed_exp-e4_mixed_path_seed-0_20260725T144908Z/train/weights/best.pt",
+    "last_weights": "/kaggle/working/runs/fold-lokrum_model-mixed_exp-e4_mixed_path_seed-0_20260725T144908Z/train/weights/last.pt",
+    "model": "yolov8n.pt",
+    "data_yaml": "/kaggle/working/processed/yolo_loso_lokrum_mixed_T0_T4/data.yaml",
+    "train_results": {
+      "metrics/precision(B)": 0.68271,
+      "metrics/recall(B)": 0.42519,
+      "metrics/mAP50(B)": 0.45783,
+      "metrics/mAP50-95(B)": 0.3109,
+      "val/box_loss": 1.08957,
+      "val/cls_loss": 1.6366,
+      "val/dfl_loss": 1.06285,
+      "fitness": 0.3109
+    }
+  },
+  "eval": {
+    "mixed_val": {
+      "mAP50": 0.4574017694266032,
+      "mAP50_95": 0.31084116694330444,
+      "precision": 0.6871053527085144,
+      "recall": 0.4229694171962024,
+      "per_class_mAP50_95": [
+        0.413027110905513,
+        0.12387879441141447,
+        0.3956175955129858
+      ]
+    },
+    "mixed_test": {
+      "mAP50": 0.17941959822914375,
+      "mAP50_95": 0.1308259482074445,
+      "precision": 0.2867200897832403,
+      "recall": 0.16915180003780694,
+      "per_class_mAP50_95": [
+        0.025778038112461044,
+        0.0008034179385832141,
+        0.36589638857128925
+      ]
+    },
+    "T0_test": {
+      "mAP50": 0.18286756033218357,
+      "mAP50_95": 0.13339583590299744,
+      "precision": 0.2902665712938308,
+      "recall": 0.16066947640540097,
+      "per_class_mAP50_95": [
+        0.02261017749112202,
+        0.0018719859948775827,
+        0.3757053442229926
+      ]
+    },
+    "T4_test": {
+      "mAP50": 0.17711022526190598,
+      "mAP50_95": 0.12777608805646878,
+      "precision": 0.27727418840692797,
+      "recall": 0.18025391324105566,
+      "per_class_mAP50_95": [
+        0.0299684890362475,
+        0.00039953396786139366,
+        0.35296024116529745
+      ]
+    }
+  }
+}
