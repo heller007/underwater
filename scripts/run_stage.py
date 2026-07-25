@@ -81,6 +81,22 @@ def main() -> None:
         from src.common import load_env
 
         env = load_env(args.env)
+        # Fresh Save Version sessions have empty /kaggle/working — rebuild data first.
+        yolo = env.processed_root / f"yolo_loso_{args.held_out_site.lower()}" / "data.yaml"
+        manifest = env.manifests_root / f"loso_{args.held_out_site.lower()}" / "manifest.csv"
+        if not yolo.exists() or not manifest.exists():
+            print("YOLO/manifests missing; running prep first...", flush=True)
+            run(
+                [
+                    py,
+                    "scripts/run_stage.py",
+                    "--stage",
+                    "prep",
+                    *env_args,
+                    *sc_args,
+                    *site_args,
+                ]
+            )
         weights = Path(args.weights) if args.weights else None
         if weights is None or not Path(str(weights)).exists():
             # try latest e4 mixed run
@@ -96,7 +112,15 @@ def main() -> None:
                     break
         if weights is None or not Path(weights).exists():
             raise SystemExit(
-                "E5 needs E4 weights. Pass --weights /kaggle/input/.../best.pt"
+                "E5 needs E4 mixed weights. Pass --weights /path/to/e4_best.pt "
+                "(not E3-T4). Attach your E4 dataset and set E4_WEIGHTS."
+            )
+        wname = Path(weights).name.lower()
+        if "e3" in wname or "t4" in wname and "e4" not in wname and "mixed" not in wname:
+            print(
+                f"WARNING: weights look like E3/T4 ({weights}). "
+                "E5 oracle should use E4 mixed best.pt.",
+                flush=True,
             )
         cmd = [
             py,

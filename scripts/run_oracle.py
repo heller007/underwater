@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
 
 from src.common import create_run, load_env, load_yaml, set_seed, setup_logging
 from src.common.quiet import progress, quiet_run
-from src.data import load_seaclear, prepare_yolo_fold
+from src.data import build_loso_fold, load_seaclear, prepare_yolo_fold, write_fold_manifests
 from src.detection.oracle import run_e5_oracle
 
 
@@ -23,13 +23,22 @@ def _ensure_splits(env, site: str, needed: list[str]) -> Path:
     if not missing and (yolo / "data.yaml").exists():
         return yolo
     progress(f"[e5] preparing missing YOLO splits: {missing or needed}")
+    if env.seaclear_root is None:
+        raise SystemExit("SeaClear root not found — attach SeaClear dataset")
+    ds = load_seaclear(env.seaclear_root)
     manifest = env.manifests_root / f"loso_{site.lower()}" / "manifest.csv"
     if not manifest.exists():
-        raise SystemExit("Missing manifests — run: python scripts/run_stage.py --stage prep --env kaggle")
-    if env.seaclear_root is None:
-        raise SystemExit("SeaClear root not found")
-    ds = load_seaclear(env.seaclear_root)
-    prepare_yolo_fold(ds, manifest, yolo, splits=tuple(sorted(set(needed) | {"train", "val", "test"})))
+        progress("[e5] building LOSO manifests (fresh session)...")
+        df = build_loso_fold(ds, held_out_site=site, seed=0)
+        write_fold_manifests(df, env.manifests_root, held_out_site=site)
+    if not manifest.exists():
+        raise SystemExit(f"Failed to create manifest at {manifest}")
+    prepare_yolo_fold(
+        ds,
+        manifest,
+        yolo,
+        splits=tuple(sorted(set(needed) | {"train", "val", "test", "gate"})),
+    )
     return yolo
 
 
