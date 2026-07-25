@@ -56,12 +56,10 @@ python scripts/evaluate.py --weights runs/<run_id>/train/weights/best.pt --held-
 
 Training uses Ultralytics multi-GPU via `device=0,1` (auto on Kaggle / when 2 GPUs are visible). Batch defaults to 32 (≈16/GPU). If OOM, pass `--batch 16` or `--batch 8`.
 
-## Experiment funnel
+## Experiment tracking (paper)
 
-1. **smoke** — audit + 100 images + 2 epochs (verify 2 GPUs)
-2. **prep** — audit + LOSO manifests + YOLO dirs
-3. **e1** — raw YOLOv8n train/eval on development fold (held-out site)
-4. Then E2–E5 (naive enhance, fixed paths, mixed, oracle go/no-go) — not yet implemented as runners
+After each stage, update [`reports/EXPERIMENT_LOG.md`](reports/EXPERIMENT_LOG.md) with protocol, metrics, run IDs, and findings. That file is the source for paper tables/figures.
+
 
 ## Repo layout
 
