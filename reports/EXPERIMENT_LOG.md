@@ -16,7 +16,8 @@ Update this file after every stage. Every number must trace to a run folder / ar
 | --- | --- | --- |
 | E1 | `fold-lokrum_model-t0_exp-e1_baseline_seed-0_20260725T084249Z` | Also mirrored as Kaggle dataset `pandeyvineet/e1weights` |
 | E2 | `fold-lokrum_model-e1frozen_exp-e2_naive_enhance_seed-0_20260725T103126Z` | See `e2/e2_results.json` |
-| E3 | *pending* | Fixed-path T0/T2/T4 |
+| E3 | `fold-lokrum_model-fixed_exp-e3_fixed_path_seed-0_20260725T112111Z` | T4 weights saved; T2 metrics from log after freeze |
+| E4 | *next* | Mixed-path detector |
 
 Split sizes (LOSO Lokrum, full SeaClear): **train 6201 / val 918 / test 972** (8610 images).
 
@@ -115,28 +116,46 @@ E2 is **test-time preprocessing without adaptation**, not a fair fixed-enhanceme
 
 ---
 
-## E3 — Fixed-path training (in progress / next)
+## E3 — Fixed-path training (train & test consistently on \(T_k\))
 
-### Protocol (predeclared)
-- For each shortlisted action \(T_k \in \{T_0, T_2, T_4\}\):
-  - Train detector **only** on \(T_k\)-transformed train images
-  - Validate on \(T_k\) val; test on \(T_k\) Lokrum test
-- **T0:** reuse E1 weights/metrics (identical protocol)
-- Same hyperparameters as E1 (`configs/detector/yolov8n_raw.yaml`)
+### Protocol
+- Shortlist from E2: \(T_0\), \(T_2\), \(T_4\) (T1/T3 dropped after E2)
+- For each \(T_k\): train on \(T_k\) train images; eval on \(T_k\) val + Lokrum test
+- **T0:** reused E1 weights/metrics (no retrain)
+- Same detector config as E1; dual T4
+- Run id: `fold-lokrum_model-fixed_exp-e3_fixed_path_seed-0_20260725T112111Z`
 
-### Results table (fill after run)
+### Metrics
 
 | Action | val mAP50 | val mAP50-95 | test mAP50 | test mAP50-95 | Δ test mAP50-95 vs T0 |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| T0 | 0.436 | 0.303 | 0.074 | 0.041 | — |
-| T2 | | | | | |
-| T4 | | | | | |
+| T0 raw | 0.436 | 0.303 | 0.074 | 0.041 | — |
+| T2 LAB-CLAHE | 0.397 | 0.283 | 0.092 | 0.069 | +0.028 |
+| **T4 fusion** | **0.450** | 0.289 | **0.212** | **0.157** | **+0.116** |
 
-**Run id:** `_TBD_`  
-**Artifact:** `e3_results.json`
+**Per-class test mAP50-95 (T4):** debris 0.022, bio 0.006, robot **0.443**  
+**Per-class test mAP50-95 (T2):** debris 0.016, bio 0.003, robot 0.187  
 
-### Expected paper use
-Fair comparison of fixed enhancement pipelines vs raw under real site shift.
+### Ranking (Lokrum test mAP50-95)
+1. **T4 fusion** (0.157)  
+2. T2 CLAHE (0.069)  
+3. T0 raw (0.041)  
+
+### Findings (paper-ready)
+1. **Fixed-path fusion is much stronger than naive test-time fusion** (E2-T4 test mAP50-95 0.057 → E3-T4 **0.157**).
+2. Best fixed pipeline on held-out Lokrum is **always-enhance-with-T4 + retrain**.
+3. Domain gap remains: T4 val 0.289 vs test 0.157 — still motivates selective routing / deferral.
+4. T2 helps vs raw but is clearly worse than T4 under consistent training.
+
+### Saved artifacts (after Kaggle freeze)
+| Item | Status |
+| --- | --- |
+| T4 `best.pt` + T4 results | Saved by user |
+| T2 `best.pt` / full `e3_results.json` | Lost in freeze — **metrics recovered from `e3.log`** |
+| T0 / E1 weights | Still on Kaggle dataset `pandeyvineet/e1weights` |
+
+### Claim boundary
+E3 provides the **fair fixed-enhancement baselines**. Main comparison for later methods: proposed system vs **E3-T4** (best fixed) and **E1-T0** (raw).
 
 ---
 
@@ -181,4 +200,4 @@ Fair comparison of fixed enhancement pipelines vs raw under real site shift.
 | --- | --- |
 | 2026-07-25 | E1 baseline logged from Kaggle run `...T084249Z` |
 | 2026-07-25 | E2 naive enhance logged from run `...T103126Z`; shortlist T0/T2/T4 |
-| 2026-07-25 | E3 protocol documented; results pending |
+| 2026-07-25 | E3 fixed-path logged (T0/T2/T4); T4 best on Lokrum test; T2 weights lost in Kaggle freeze but metrics retained from log |
