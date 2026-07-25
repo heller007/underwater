@@ -193,6 +193,7 @@ def load_seaclear(
     root: Path,
     class_map: dict[str, Any] | None = None,
     max_images: int | None = None,
+    held_out_site: str | None = None,
 ) -> SeaClearDataset:
     root = Path(root)
     class_map = class_map or load_class_map()
@@ -208,16 +209,48 @@ def load_seaclear(
         cat_mapped[cid] = (mapped_name, mapped_id)
         map_reasons[str(cat.get("name"))] = reason
 
+    # Build lightweight records first so max_images can be site-stratified
+    raw_images = list(coco.get("images", []))
+    prelim: list[tuple[dict[str, Any], str, str, str]] = []
+    for im in raw_images:
+        file_name = im["file_name"]
+        # Domain from file_name before path resolve (faster / works offline)
+        site, camera, sequence = parse_domain_from_path(Path(file_name), file_name)
+        prelim.append((im, site, camera, sequence))
+
+    if max_images is not None and max_images < len(prelim):
+        by_site: dict[str, list[tuple]] = defaultdict(list)
+        for item in prelim:
+            by_site[item[1]].append(item)
+        sites = sorted(by_site.keys())
+        # Ensure held-out site is represented when present
+        if held_out_site:
+            for s in sites:
+                if s.lower() == held_out_site.lower():
+                    # move to front so it gets quota
+                    sites = [s] + [x for x in sites if x != s]
+                    break
+        selected: list[tuple] = []
+        # Round-robin until max_images
+        idxs = {s: 0 for s in sites}
+        while len(selected) < max_images and any(idxs[s] < len(by_site[s]) for s in sites):
+            for s in sites:
+                if len(selected) >= max_images:
+                    break
+                i = idxs[s]
+                if i < len(by_site[s]):
+                    selected.append(by_site[s][i])
+                    idxs[s] = i + 1
+        prelim = selected
+
     path_cache: dict[str, Path] = {}
     images: list[ImageRecord] = []
-    for i, im in enumerate(coco.get("images", [])):
-        if max_images is not None and i >= max_images:
-            break
+    for im, site, camera, sequence in prelim:
         file_name = im["file_name"]
         img_path = find_image_path(root, file_name, path_cache)
         if img_path is None:
-            # Keep record with unresolved path for audit
             img_path = root / file_name
+        # Re-parse from resolved path (more accurate)
         site, camera, sequence = parse_domain_from_path(img_path, file_name)
         group_id = f"{site}|{camera}|{sequence}"
         images.append(
@@ -265,6 +298,8 @@ def load_seaclear(
         "n_annotations_loaded": len(annotations),
         "category_mapping": map_reasons,
         "supercategories": SUPER_IDS,
+        "max_images": max_images,
+        "held_out_site": held_out_site,
     }
     return SeaClearDataset(
         root=root,

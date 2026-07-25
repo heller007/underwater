@@ -39,11 +39,11 @@ def main() -> None:
         log.error("Attach SeaClear via Add Data, or pass --seaclear-root.")
         sys.exit(1)
 
-    ds = load_seaclear(Path(root), max_images=args.max_images)
     held = args.held_out_site or cfg.get("dev_held_out_site")
+    ds = load_seaclear(Path(root), max_images=args.max_images, held_out_site=held)
 
-    if args.held_out_site or held:
-        site = args.held_out_site or held
+    if held:
+        site = held
         log.info("Building single fold held_out=%s seed=%s", site, seed)
         df = build_loso_fold(ds, site, seed=seed, ratios=ratios)
         paths = write_fold_manifests(df, env.manifests_root, site)

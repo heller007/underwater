@@ -51,7 +51,7 @@ def main() -> None:
         sys.exit(1)
 
     out = Path(args.out) if args.out else env.processed_root / f"yolo_loso_{site.lower()}"
-    ds = load_seaclear(Path(root), max_images=args.max_images)
+    ds = load_seaclear(Path(root), max_images=args.max_images, held_out_site=site)
     splits = tuple(s.strip() for s in args.splits.split(",") if s.strip())
     meta = prepare_yolo_fold(
         ds,
