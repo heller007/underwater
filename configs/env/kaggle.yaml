@@ -19,9 +19,13 @@ pin_memory: true
 seaclear_candidates:
   - seaclear-marine-debris-detection-and-segmentation
   - seaclear-marine-debris-dataset
+  - seaclear-marine-debris
   - seaclear
   - Seaclear-Marine-Debris-Dataset
+  - Seaclear Marine Debris Dataset
 trashcan_candidates:
+  - trashcan-1-0
   - trashcan
   - trashcan-dataset
   - TrashCan
+  - trash-can

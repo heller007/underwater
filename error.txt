@@ -1,0 +1,18 @@
+fatal: destination path 'underwater' already exists and is not an empty directory.
+/kaggle/working/underwater
+Note: you may need to restart the kernel to use updated packages.
++ /usr/bin/python3 scripts/audit_data.py --env kaggle --no-hashes --max-images 100
+2026-07-25 08:24:42,294 | ERROR | underwater | SeaClear root not found. Place data under data/raw/seaclear or attach a Kaggle Dataset and set configs/env/kaggle.yaml.
+Audit returned non-zero; continuing smoke carefully
++ /usr/bin/python3 scripts/build_splits.py --env kaggle --held-out-site Lokrum --max-images 100
+2026-07-25 08:24:44,779 | ERROR | underwater | SeaClear root not found: None
+Traceback (most recent call last):
+  File "/kaggle/working/underwater/scripts/run_stage.py", line 131, in <module>
+    main()
+  File "/kaggle/working/underwater/scripts/run_stage.py", line 60, in main
+    run(
+  File "/kaggle/working/underwater/scripts/run_stage.py", line 23, in run
+    subprocess.check_call(cmd, cwd=ROOT)
+  File "/usr/lib/python3.12/subprocess.py", line 413, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command '['/usr/bin/python3', 'scripts/build_splits.py', '--env', 'kaggle', '--held-out-site', 'Lokrum', '--max-images', '100']' returned non-zero exit status 1.

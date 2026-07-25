@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.common import load_env, load_yaml, setup_logging
+from src.common import list_input_datasets, load_env, load_yaml, setup_logging
 from src.data import build_all_loso, build_loso_fold, load_seaclear, write_fold_manifests
 
 
@@ -34,6 +34,9 @@ def main() -> None:
     root = Path(args.seaclear_root) if args.seaclear_root else env.seaclear_root
     if root is None or not Path(root).exists():
         log.error("SeaClear root not found: %s", root)
+        for line in list_input_datasets(env.data_root):
+            log.error("  input: %s", line)
+        log.error("Attach SeaClear via Add Data, or pass --seaclear-root.")
         sys.exit(1)
 
     ds = load_seaclear(Path(root), max_images=args.max_images)

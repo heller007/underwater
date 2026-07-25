@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.common import load_env, save_json, setup_logging
+from src.common import list_input_datasets, load_env, save_json, setup_logging
 from src.data import audit_dataset, load_seaclear
 
 
@@ -30,9 +30,11 @@ def main() -> None:
     root = Path(args.seaclear_root) if args.seaclear_root else env.seaclear_root
     if root is None or not Path(root).exists():
         log.error(
-            "SeaClear root not found. Place data under data/raw/seaclear "
-            "or attach a Kaggle Dataset and set configs/env/kaggle.yaml."
+            "SeaClear root not found. Attach the SeaClear Kaggle Dataset to this "
+            "notebook (Add Data), or pass --seaclear-root /kaggle/input/<slug>."
         )
+        for line in list_input_datasets(env.data_root):
+            log.error("  input: %s", line)
         sys.exit(1)
 
     log.info("Loading SeaClear from %s", root)

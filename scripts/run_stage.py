@@ -44,13 +44,7 @@ def main() -> None:
         audit_cmd = [py, "scripts/audit_data.py", *env_args, *sc_args, *max_args, "--no-hashes"]
         if args.stage == "smoke":
             audit_cmd += ["--max-images", str(args.max_images or 100)]
-        try:
-            run(audit_cmd)
-        except subprocess.CalledProcessError as e:
-            # Missing files may exit 2; still allow smoke if partial
-            if args.stage != "smoke":
-                raise e
-            print("Audit returned non-zero; continuing smoke carefully", flush=True)
+        run(audit_cmd)
 
     # splits + prepare
     if args.stage in ("smoke", "prep", "e1"):
