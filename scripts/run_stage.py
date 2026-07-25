@@ -24,7 +24,7 @@ if str(ROOT) not in sys.path:
 
 
 def run(cmd: list[str]) -> None:
-    print("+", " ".join(cmd), flush=True)
+    # Minimal: do not echo full command spam; details stay in stage logs
     subprocess.check_call(cmd, cwd=ROOT)
 
 

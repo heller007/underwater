@@ -1,4 +1,4 @@
-"""Quiet console for Kaggle: full logs to file, short progress to stdout only."""
+"""Quiet console for Kaggle: full logs to file, minimal progress to cell."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def progress(msg: str) -> None:
 @contextmanager
 def quiet_run(log_path: str | Path, also_stderr: bool = True) -> Iterator[Path]:
     """
-    Redirect stdout/stderr to log_path. Use progress() for cell-visible lines.
+    Redirect stdout/stderr to log_path. Use progress() for rare cell-visible lines.
     """
     log_path = Path(log_path)
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -33,12 +33,10 @@ def quiet_run(log_path: str | Path, also_stderr: bool = True) -> Iterator[Path]:
         sys.stdout = log_f  # type: ignore[assignment]
         if also_stderr:
             sys.stderr = log_f  # type: ignore[assignment]
-        # Mute noisy loggers that bypass stdout
-        for name in ("ultralytics", " Ultralytics"):
+        for name in ("ultralytics", "ultralytics.yolo", "torch", "torch.distributed"):
             lg = logging.getLogger(name)
-            lg.setLevel(logging.WARNING)
+            lg.setLevel(logging.ERROR)
             lg.propagate = False
-        progress(f"[log] writing details -> {log_path}")
         yield log_path
     finally:
         sys.stdout = old_out
@@ -47,11 +45,12 @@ def quiet_run(log_path: str | Path, also_stderr: bool = True) -> Iterator[Path]:
 
 
 def silence_ultralytics() -> None:
-    """Reduce Ultralytics console spam (call before YOLO import/train)."""
-    os.environ.setdefault("YOLO_VERBOSE", "False")
+    """Kill Ultralytics console spam (call before YOLO train/val)."""
+    os.environ["YOLO_VERBOSE"] = "False"
+    os.environ["TQDM_DISABLE"] = "1"
     try:
         from ultralytics.utils import LOGGER
 
-        LOGGER.setLevel(logging.WARNING)
+        LOGGER.setLevel(logging.ERROR)
     except Exception:
         pass

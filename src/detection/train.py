@@ -49,14 +49,18 @@ def train_yolo(
 
         def _on_fit_epoch_end(trainer):  # type: ignore[no-untyped-def]
             ep = int(getattr(trainer, "epoch", 0)) + 1
+            # Minimal: print every 5 epochs + first + last
+            if ep != 1 and ep % 5 != 0 and ep != epochs:
+                return
             metrics = getattr(trainer, "metrics", {}) or {}
-            # Prefer common keys if present
             map50 = metrics.get("metrics/mAP50(B)", metrics.get("mAP50"))
             map5095 = metrics.get("metrics/mAP50-95(B)", metrics.get("mAP50-95"))
             if map50 is not None and map5095 is not None:
-                progress(f"[train] epoch {ep}/{epochs}  mAP50={float(map50):.4f}  mAP50-95={float(map5095):.4f}")
+                progress(
+                    f"[train] epoch {ep}/{epochs}  mAP50={float(map50):.3f}  mAP50-95={float(map5095):.3f}"
+                )
             else:
-                progress(f"[train] epoch {ep}/{epochs} done")
+                progress(f"[train] epoch {ep}/{epochs}")
 
         model.add_callback("on_fit_epoch_end", _on_fit_epoch_end)
 
@@ -101,7 +105,7 @@ def train_yolo(
         train_kwargs["resume"] = resume if isinstance(resume, str) else True
 
     if quiet:
-        progress(f"[train] starting {epochs} epochs on device={device}")
+        progress(f"[train] start epochs={epochs} device={device} (updates every 5 epochs)")
     results = model.train(**train_kwargs)
     save_dir = Path(project) / name
     best = save_dir / "weights" / "best.pt"

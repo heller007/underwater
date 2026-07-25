@@ -26,12 +26,11 @@ def materialize_mixed_dataset(
     actions: list[str],
     seed: int = 0,
     splits: tuple[str, ...] = ("train", "val", "test"),
-    progress_every: int = 200,
+    progress_every: int = 0,
 ) -> tuple[Path, dict[str, Any]]:
     """
     For each image, assign one action uniformly (deterministic) and write T_k(x).
-    Labels are linked/copied unchanged.
-    Returns (data_yaml_path, assignment_stats).
+    Cell progress: start + end of each split only (minimal).
     """
     src_yolo_root = Path(src_yolo_root)
     out_root = Path(out_root)
@@ -62,7 +61,7 @@ def materialize_mixed_dataset(
             if p.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp"}
         )
         n = len(images)
-        progress(f"[mixed] {split}: {n} images, actions={actions}")
+        progress(f"[mixed] {split}: start ({n} images)")
         for i, img_path in enumerate(images, 1):
             action = _pick_action(img_path.stem, actions, seed)
             counts[action] += 1
@@ -83,8 +82,10 @@ def materialize_mixed_dataset(
                 _copy_or_link(lbl_src, lbl_dst)
             else:
                 lbl_dst.write_text("", encoding="utf-8")
-            if i % progress_every == 0 or i == n:
+            # optional dense progress (off by default)
+            if progress_every and (i % progress_every == 0 or i == n):
                 progress(f"[mixed] {split}: {i}/{n}")
+        progress(f"[mixed] {split}: done {counts}")
         stats["splits"][split] = counts
 
     assignments_path.write_text("\n".join(assign_rows) + "\n", encoding="utf-8")
@@ -103,5 +104,4 @@ def materialize_mixed_dataset(
         import json
 
         json.dump(stats, f, indent=2)
-    progress(f"[mixed] ready: {yaml_path}")
     return yaml_path, stats

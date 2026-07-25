@@ -83,8 +83,7 @@ def main() -> None:
     log_path = run.run_dir / "e4_console.log"
 
     def _work() -> dict:
-        progress(f"[e4] run={run.run_id}")
-        progress(f"[e4] actions={actions} site={site} device={device}")
+        progress(f"[e4] start actions={actions} device={device}")
 
         mixed_root = env.processed_root / f"yolo_loso_{site.lower()}_mixed_{'_'.join(actions)}"
         data_yaml, stats = materialize_mixed_dataset(
@@ -94,7 +93,6 @@ def main() -> None:
             seed=seed,
             splits=("train", "val", "test"),
         )
-        progress(f"[e4] mixed assignment stats: {stats.get('splits')}")
 
         train_summary = train_yolo(
             data_yaml=data_yaml,
@@ -105,7 +103,6 @@ def main() -> None:
         )
         weights = Path(train_summary["best_weights"] or train_summary["last_weights"])
 
-        # Eval mixed detector on: mixed val/test, plus pure T0 and T4 test sets
         results: dict = {
             "weights": str(weights),
             "mixed_stats": stats,
@@ -113,7 +110,6 @@ def main() -> None:
             "eval": {},
         }
 
-        progress("[e4] eval on mixed val/test")
         for split in ("val", "test"):
             m = predict_split(
                 weights=weights,
@@ -126,7 +122,7 @@ def main() -> None:
             results["eval"][f"mixed_{split}"] = m.get("metrics", m)
 
         for action in actions:
-            progress(f"[e4] eval on pure {action} test (consistent path)")
+            progress(f"[e4] eval pure {action} test")
             pure_root = env.processed_root / f"yolo_loso_{site.lower()}_{action}_e4eval"
             pure_yaml = materialize_enhanced_split(
                 src_yolo, pure_root, action, splits=("test",)
@@ -144,22 +140,22 @@ def main() -> None:
                 shutil.rmtree(pure_root / "images", ignore_errors=True)
 
         if args.drop_enhanced:
-            progress("[e4] dropping mixed images to save disk")
             shutil.rmtree(mixed_root / "images", ignore_errors=True)
 
         save_json(run.run_dir / "e4_results.json", results)
-        progress(f"[e4] DONE results -> {run.run_dir / 'e4_results.json'}")
-        progress(f"[e4] weights -> {weights}")
+        progress(f"[e4] DONE")
+        progress(f"[e4] weights={weights}")
+        progress(f"[e4] results={run.run_dir / 'e4_results.json'}")
         return results
 
     if quiet:
         with quiet_run(log_path):
-            # progress() still prints to cell; YOLO spam goes to log
             results = _work()
     else:
         results = _work()
 
-    print(run.run_dir)  # final path always visible
+    # single final path line for the notebook
+    progress(str(run.run_dir))
 
 
 if __name__ == "__main__":
