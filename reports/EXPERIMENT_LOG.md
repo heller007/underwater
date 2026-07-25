@@ -18,7 +18,7 @@ Update this file after every stage. Every number must trace to a run folder / ar
 | E2 | `fold-lokrum_model-e1frozen_exp-e2_naive_enhance_seed-0_20260725T103126Z` | See `e2/e2_results.json` |
 | E3 | `fold-lokrum_model-fixed_exp-e3_fixed_path_seed-0_20260725T112111Z` | T4 weights saved; T2 metrics from log after freeze |
 | E4 | `fold-lokrum_model-mixed_exp-e4_mixed_path_seed-0_20260725T144908Z` | Mixed T0+T4; see `e4_results.json` |
-| E5 | *next* | Oracle go/no-go |
+| E5 | `fold-lokrum_model-oracle_exp-e5_oracle_seed-0_20260725T170204Z` | **PIVOT_CALIBRATION** (gap 0.008) |
 
 Split sizes (LOSO Lokrum, full SeaClear): **train 6201 / val 918 / test 972** (8610 images).
 
@@ -199,18 +199,45 @@ E4 is not the final method; it enables selective routing without training separa
 
 ---
 
-## Later stages (planned — not yet run)
+## E5 — Oracle study (frozen E4 mixed)
 
-| ID | Name | Goal |
-| --- | --- | --- |
-| E5 | Oracle study | Go/no-go for routing (≥ ~2 mAP or clear harm reduction) |
-| E6 | Quality-metric selectors | UCIQE/UIQM baselines |
-| E7 | Learned utility gate | Main method |
-| E8 | Cost-aware λ sweep | Accuracy–latency Pareto |
-| E9 | Reliability / defer | Risk–coverage |
-| E10 | Full LOSO | All five held-out sites |
-| E11 | TrashCan external | Frozen system |
-| E12–E13 | Multi-seed + stats | CIs / bootstrap |
+### Protocol
+- **Detector:** frozen E4 mixed `best.pt`
+- **Actions:** \(T_0\), \(T_4\)
+- **Splits:** gate + test (Lokrum); per-image utilities → oracle labels
+- **Go rule:** gap ≥ 0.02 mAP50, both actions ≥10%, none >90%
+
+### Test (Lokrum) outcome
+
+| Quantity | Value |
+| --- | ---: |
+| Oracle mAP50 | 0.0871 |
+| Best fixed mAP50 | 0.0789 |
+| **Gap (oracle − best fixed)** | **0.0082** (~0.8 mAP pts) |
+| Oracle action counts | T0 **830** (85%), T4 **142** (15%) |
+| **Decision** | **PIVOT_CALIBRATION** |
+
+Run: `...T170204Z` · artifacts: `e5/e5_results.json`
+
+### Finding (paper-ready)
+Selective enhancement oracle beats the best fixed path by **&lt; 1 mAP50 point** on Lokrum. Per `main.md` go/no-go, a learned action gate is unlikely to add a strong contribution. **Pivot** to degradation-aware confidence calibration + selective deferral (risk–coverage), keeping the same detector, LOSO protocol, and descriptors.
+
+### Claim boundary
+E5 rejects H1-style routing for this shortlist/detector; it does **not** invalidate E1–E4 domain-shift or enhancement findings.
+
+---
+
+## Later stages (revised after E5 pivot)
+
+| ID | Name | Goal | Status |
+| --- | --- | --- | --- |
+| E6 | Quality selectors | UCIQE/UIQM/heuristic baselines (H6) | **Ready to run** (ablation / negative evidence) |
+| E7 | Learned utility gate | Descriptor/CNN/combined | **Ready to run** (expect limited gain) |
+| E8 | Cost-aware λ sweep | Accuracy–latency | Optional / skip if E7 weak |
+| E9 | Reliability / defer | Risk–coverage, calibration | After E6/E7 (main pivot path) |
+| E10 | Full LOSO | All five held-out sites | Later |
+| E11 | TrashCan external | Frozen system | Later |
+| E12–E13 | Multi-seed + stats | CIs / bootstrap | Later |
 
 ---
 
@@ -227,7 +254,9 @@ E4 is not the final method; it enables selective routing without training separa
 
 - [x] E1 seed 0, Lokrum holdout, dual T4  
 - [x] E2 frozen E1 weights, T0–T4, val+test  
-- [ ] E3 fixed-path T0/T2/T4  
+- [x] E3 fixed-path T0/T2/T4  
+- [x] E4 mixed T0+T4  
+- [x] E5 oracle → PIVOT_CALIBRATION  
 - [ ] Save `e*_results.json` + `best.pt` per stage to a Kaggle Dataset / local archive  
 - [ ] Cite SeaClear; note community Kaggle mirror used for compute  
 
@@ -241,3 +270,4 @@ E4 is not the final method; it enables selective routing without training separa
 | 2026-07-25 | E2 naive enhance logged from run `...T103126Z`; shortlist T0/T2/T4 |
 | 2026-07-25 | E3 fixed-path logged (T0/T2/T4); T4 best on Lokrum test; T2 weights lost in Kaggle freeze but metrics retained from log |
 | 2026-07-25 | E4 mixed-path logged; strong on both T0/T4 test vs E1; below E3-T4 specialist on T4 test |
+| 2026-07-25 | E5 oracle logged (`...T170204Z`); gap 0.008 → **PIVOT_CALIBRATION**; skip E6–E8 routing |

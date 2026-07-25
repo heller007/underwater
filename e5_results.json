@@ -1,0 +1,168 @@
+{
+    "weights": "/kaggle/input/datasets/pandeyvineet/e3-t4-chkpt/e4_best.pt",
+    "actions": [
+      "T0",
+      "T4"
+    ],
+    "lambda": 0.05,
+    "delta": 0.01,
+    "conf": 0.25,
+    "costs": {
+      "T0": 0.0,
+      "T4": 1.0
+    },
+    "splits": {
+      "gate": {
+        "n_images": 519,
+        "yolo_alias": "val",
+        "oracle_action_counts": {
+          "T0": 516,
+          "T4": 3
+        },
+        "oracle_action_fractions": {
+          "T0": 0.9942196531791907,
+          "T4": 0.005780346820809248
+        },
+        "mean_error": {
+          "T0": 0.09356406260350131,
+          "T4": 0.10128092460117276
+        },
+        "mean_utility": {
+          "T0": 0.9064359373964986,
+          "T4": 0.8487190753988272
+        },
+        "t4_harm_rate": 0.3853564547206166,
+        "t4_help_rate": 0.3892100192678227,
+        "fixed_metrics": {
+          "T0": {
+            "mAP50": 0.9748920549157516,
+            "mAP50_95": 0.8595184229853048,
+            "precision": 0.9973855883250611,
+            "recall": 0.9772727272727273,
+            "per_class_mAP50_95": [
+              0.8132315585728225,
+              0.8595184229853048,
+              0.9058052873977873
+            ]
+          },
+          "T4": {
+            "mAP50": 0.9749643701433113,
+            "mAP50_95": 0.8446007382297619,
+            "precision": 0.9892948008226664,
+            "recall": 0.9729802218113506,
+            "per_class_mAP50_95": [
+              0.8108597306580257,
+              0.8446007382297619,
+              0.878341745801498
+            ]
+          }
+        },
+        "oracle_metrics": {
+          "mAP50": 0.9749287410926366,
+          "mAP50_95": 0.8598173895468244,
+          "precision": 0.9985664454388297,
+          "recall": 0.9772727272727273,
+          "per_class_mAP50_95": [
+            0.8138294916958614,
+            0.8598173895468244,
+            0.9058052873977873
+          ]
+        },
+        "go_no_go": {
+          "oracle_minus_best_fixed_mAP50": -3.562905067466815e-05,
+          "action_fractions": {
+            "T0": 0.9942196531791907,
+            "T4": 0.005780346820809248
+          },
+          "diversity_ok_ge_10pct_each": false,
+          "not_collapsed_le_90pct": false,
+          "decision": "PIVOT_CALIBRATION",
+          "continue_routing": false,
+          "notes": "H1-style target: +2 mAP50 over best fixed on same detector; with 2 actions require both used on >=10% images."
+        },
+        "table_csv": "/kaggle/working/runs/fold-lokrum_model-oracle_exp-e5_oracle_seed-0_20260725T170204Z/e5/oracle_table_gate.csv"
+      },
+      "test": {
+        "n_images": 972,
+        "yolo_alias": "test",
+        "oracle_action_counts": {
+          "T0": 830,
+          "T4": 142
+        },
+        "oracle_action_fractions": {
+          "T0": 0.8539094650205762,
+          "T4": 0.14609053497942387
+        },
+        "mean_error": {
+          "T0": 0.940221297105573,
+          "T4": 0.9268770793709857
+        },
+        "mean_utility": {
+          "T0": 0.0597787028944271,
+          "T4": 0.023122920629014304
+        },
+        "t4_harm_rate": 0.2294238683127572,
+        "t4_help_rate": 0.2623456790123457,
+        "fixed_metrics": {
+          "T0": {
+            "mAP50": 0.058408598670567635,
+            "mAP50_95": 0.04167628312344301,
+            "precision": 0.3389789020856982,
+            "recall": 0.07922586037170003,
+            "per_class_mAP50_95": [
+              0.009466559880236144,
+              3.753028038591567e-05,
+              0.11552475920970698
+            ]
+          },
+          "T4": {
+            "mAP50": 0.07886276947318094,
+            "mAP50_95": 0.05573379557453346,
+            "precision": 0.3622123218804134,
+            "recall": 0.10367260457406509,
+            "per_class_mAP50_95": [
+              0.011538190271531388,
+              2.9929577464788733e-05,
+              0.15563326687460416
+            ]
+          }
+        },
+        "oracle_metrics": {
+          "mAP50": 0.08710551711253994,
+          "mAP50_95": 0.0639104217158764,
+          "precision": 0.3864365319345011,
+          "recall": 0.11281732711873309,
+          "per_class_mAP50_95": [
+            0.01364481068028286,
+            3.9839972577036874e-05,
+            0.1780466144947693
+          ]
+        },
+        "go_no_go": {
+          "oracle_minus_best_fixed_mAP50": 0.008242747639359005,
+          "action_fractions": {
+            "T0": 0.8539094650205762,
+            "T4": 0.14609053497942387
+          },
+          "diversity_ok_ge_10pct_each": true,
+          "not_collapsed_le_90pct": true,
+          "decision": "PIVOT_CALIBRATION",
+          "continue_routing": false,
+          "notes": "H1-style target: +2 mAP50 over best fixed on same detector; with 2 actions require both used on >=10% images."
+        },
+        "table_csv": "/kaggle/working/runs/fold-lokrum_model-oracle_exp-e5_oracle_seed-0_20260725T170204Z/e5/oracle_table_test.csv"
+      }
+    },
+    "primary_go_no_go": {
+      "oracle_minus_best_fixed_mAP50": 0.008242747639359005,
+      "action_fractions": {
+        "T0": 0.8539094650205762,
+        "T4": 0.14609053497942387
+      },
+      "diversity_ok_ge_10pct_each": true,
+      "not_collapsed_le_90pct": true,
+      "decision": "PIVOT_CALIBRATION",
+      "continue_routing": false,
+      "notes": "H1-style target: +2 mAP50 over best fixed on same detector; with 2 actions require both used on >=10% images."
+    }
+  }

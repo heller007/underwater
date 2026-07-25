@@ -10,6 +10,8 @@ Stages:
   e3     - fixed-path train/eval for shortlisted actions (T0/T2/T4)
   e4     - mixed-path detector (T0+T4); quiet progress by default
   e5     - oracle study on frozen mixed detector (go/no-go)
+  e6     - UCIQE/UIQM/heuristic selectors on frozen E4
+  e7     - learned utility gate (descriptor/CNN/combined)
 """
 
 from __future__ import annotations
@@ -51,7 +53,7 @@ def _latest_e1_weights(runs_root: Path, site: str) -> Path | None:
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--stage", choices=["smoke", "prep", "e1", "e2", "e3", "e4", "e5"], required=True)
+    p.add_argument("--stage", choices=["smoke", "prep", "e1", "e2", "e3", "e4", "e5", "e6", "e7"], required=True)
     p.add_argument("--env", default=None)
     p.add_argument("--seaclear-root", default=None)
     p.add_argument("--held-out-site", default="Lokrum")
@@ -61,10 +63,12 @@ def main() -> None:
     p.add_argument(
         "--weights",
         default=None,
-        help="For e2/e3: path to E1/E3 best.pt",
+        help="For e2/e3/e5/e6/e7: path to detector best.pt",
     )
+    p.add_argument("--oracle-gate", default=None, help="E6/E7: oracle_table_gate.csv")
+    p.add_argument("--oracle-test", default=None, help="E6/E7: oracle_table_test.csv")
     p.add_argument("--drop-enhanced", action="store_true")
-    p.add_argument("--actions", default=None, help="For e3/e4: e.g. T0,T4")
+    p.add_argument("--actions", default=None, help="For e3/e4/e5/e6/e7: e.g. T0,T4")
     p.add_argument("--epochs", type=int, default=None)
     p.add_argument("--batch", type=int, default=None)
     p.add_argument("--no-quiet", action="store_true")
@@ -75,6 +79,124 @@ def main() -> None:
     sc_args = ["--seaclear-root", args.seaclear_root] if args.seaclear_root else []
     site_args = ["--held-out-site", args.held_out_site]
     max_args = ["--max-images", str(args.max_images)] if args.max_images else []
+
+    def _resolve_e4_weights(env, weights_arg):
+        weights = Path(weights_arg) if weights_arg else None
+        if weights is not None and Path(str(weights)).exists():
+            w = Path(weights)
+            if w.is_file():
+                return w
+            hits = list(w.rglob("best.pt"))
+            for h in hits:
+                if "e4" in h.name.lower():
+                    return h
+            if hits:
+                return hits[0]
+        runs = sorted(
+            env.runs_root.glob(f"fold-{args.held_out_site.lower()}_model-mixed_*"),
+            key=lambda p: p.stat().st_mtime,
+        )
+        for r in reversed(runs):
+            b = r / "train" / "weights" / "best.pt"
+            if b.exists():
+                return b
+        return None
+
+    # ---- E6 quality selectors ----
+    if args.stage == "e6":
+        from src.common import load_env
+
+        env = load_env(args.env)
+        yolo = env.processed_root / f"yolo_loso_{args.held_out_site.lower()}" / "data.yaml"
+        manifest = env.manifests_root / f"loso_{args.held_out_site.lower()}" / "manifest.csv"
+        if not yolo.exists() or not manifest.exists():
+            print("YOLO/manifests missing; running prep first...", flush=True)
+            run(
+                [
+                    py,
+                    "scripts/run_stage.py",
+                    "--stage",
+                    "prep",
+                    *env_args,
+                    *sc_args,
+                    *site_args,
+                ]
+            )
+        weights = _resolve_e4_weights(env, args.weights)
+        if weights is None:
+            raise SystemExit("E6 needs E4 mixed weights. Pass --weights /path/to/e4_best.pt")
+        cmd = [
+            py,
+            "scripts/run_quality_selectors.py",
+            *env_args,
+            *site_args,
+            "--weights",
+            str(weights),
+            "--drop-enhanced",
+        ]
+        if args.actions:
+            cmd += ["--actions", args.actions]
+        if args.device:
+            cmd += ["--device", args.device]
+        if args.oracle_gate:
+            cmd += ["--oracle-gate", args.oracle_gate]
+        if args.oracle_test:
+            cmd += ["--oracle-test", args.oracle_test]
+        if args.no_quiet:
+            cmd += ["--no-quiet"]
+        run(cmd)
+        print("E6 complete.")
+        return
+
+    # ---- E7 utility gate ----
+    if args.stage == "e7":
+        from src.common import load_env
+
+        env = load_env(args.env)
+        yolo = env.processed_root / f"yolo_loso_{args.held_out_site.lower()}" / "data.yaml"
+        manifest = env.manifests_root / f"loso_{args.held_out_site.lower()}" / "manifest.csv"
+        if not yolo.exists() or not manifest.exists():
+            print("YOLO/manifests missing; running prep first...", flush=True)
+            run(
+                [
+                    py,
+                    "scripts/run_stage.py",
+                    "--stage",
+                    "prep",
+                    *env_args,
+                    *sc_args,
+                    *site_args,
+                ]
+            )
+        weights = _resolve_e4_weights(env, args.weights)
+        if weights is None:
+            raise SystemExit("E7 needs E4 mixed weights. Pass --weights /path/to/e4_best.pt")
+        cmd = [
+            py,
+            "scripts/train_gate.py",
+            *env_args,
+            *site_args,
+            "--weights",
+            str(weights),
+            "--drop-enhanced",
+        ]
+        if args.actions:
+            cmd += ["--actions", args.actions]
+        if args.device:
+            cmd += ["--device", args.device]
+        if args.epochs is not None:
+            cmd += ["--epochs", str(args.epochs)]
+        if args.batch is not None:
+            cmd += ["--batch", str(args.batch)]
+        if args.oracle_gate:
+            cmd += ["--oracle-gate", args.oracle_gate]
+        if args.oracle_test:
+            cmd += ["--oracle-test", args.oracle_test]
+        if args.no_quiet:
+            cmd += ["--no-quiet"]
+        run(cmd)
+        print("E7 complete.")
+        return
 
     # ---- E5 oracle ----
     if args.stage == "e5":

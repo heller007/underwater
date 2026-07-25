@@ -1,0 +1,11 @@
+experiment_id: e6_quality_selectors
+stage: e6
+description: "UCIQE/UIQM/heuristic action selectors vs frozen E4 mixed detector"
+depends_on: e5_oracle
+held_out_site: Lokrum
+seed: 0
+actions: [T0, T4]
+splits: [gate, test]
+selectors: [always_t0, argmax_uciqe, argmax_uiqm, heuristic_low_quality]
+conf: 0.25
+status: ready

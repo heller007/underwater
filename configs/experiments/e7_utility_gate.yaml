@@ -1,0 +1,16 @@
+experiment_id: e7_utility_gate
+stage: e7
+description: "Learned utility gate (descriptor / CNN / combined) on E5 oracle labels"
+depends_on: e5_oracle
+held_out_site: Lokrum
+seed: 0
+actions: [T0, T4]
+gates: [descriptor, cnn, combined]
+epochs: 40
+batch: 64
+lr: 0.001
+alpha: 0.5
+temperature: 1.0
+imgsz: 160
+conf: 0.25
+status: ready
