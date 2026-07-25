@@ -6,6 +6,7 @@ Stages:
   smoke  - audit (optional) + tiny train
   prep   - audit + splits + yolo prepare
   e1     - prep (if needed) + full baseline train + eval
+  e2     - naive test-time enhancement on frozen E1 weights
 """
 
 from __future__ import annotations
@@ -32,15 +33,34 @@ def _split_has_images(processed_root: Path, site: str, split: str) -> bool:
     return any(img_dir.iterdir())
 
 
+def _latest_e1_weights(runs_root: Path, site: str) -> Path | None:
+    pattern = f"fold-{site.lower()}_model-t0_exp-e1_baseline_*"
+    runs = sorted(runs_root.glob(pattern), key=lambda p: p.stat().st_mtime)
+    for run_dir in reversed(runs):
+        best = run_dir / "train" / "weights" / "best.pt"
+        if best.exists():
+            return best
+        last = run_dir / "train" / "weights" / "last.pt"
+        if last.exists():
+            return last
+    return None
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--stage", choices=["smoke", "prep", "e1"], required=True)
+    p.add_argument("--stage", choices=["smoke", "prep", "e1", "e2"], required=True)
     p.add_argument("--env", default=None)
     p.add_argument("--seaclear-root", default=None)
     p.add_argument("--held-out-site", default="Lokrum")
     p.add_argument("--skip-audit", action="store_true")
     p.add_argument("--max-images", type=int, default=None)
     p.add_argument("--device", default=None)
+    p.add_argument(
+        "--weights",
+        default=None,
+        help="For e2: path to E1 best.pt (auto-discovers latest e1 run if omitted)",
+    )
+    p.add_argument("--drop-enhanced", action="store_true")
     args = p.parse_args()
 
     py = sys.executable
@@ -49,13 +69,42 @@ def main() -> None:
     site_args = ["--held-out-site", args.held_out_site]
     max_args = ["--max-images", str(args.max_images)] if args.max_images else []
 
+    # ---- E2 only (no retraining) ----
+    if args.stage == "e2":
+        from src.common import load_env
+
+        env = load_env(args.env)
+        weights = Path(args.weights) if args.weights else _latest_e1_weights(
+            env.runs_root, args.held_out_site
+        )
+        if weights is None or not Path(weights).exists():
+            raise SystemExit(
+                "E2 needs E1 weights. Pass --weights /kaggle/working/runs/.../best.pt"
+            )
+        cmd = [
+            py,
+            "scripts/eval_naive_enhance.py",
+            *env_args,
+            "--weights",
+            str(weights),
+            *site_args,
+            "--splits",
+            "val,test",
+        ]
+        if args.device:
+            cmd += ["--device", args.device]
+        if args.drop_enhanced:
+            cmd += ["--drop-enhanced"]
+        run(cmd)
+        print("E2 complete.")
+        return
+
     if args.stage in ("smoke", "prep", "e1") and not args.skip_audit:
         audit_cmd = [py, "scripts/audit_data.py", *env_args, *sc_args, *max_args, "--no-hashes"]
         if args.stage == "smoke" and not args.max_images:
             audit_cmd += ["--max-images", "100"]
         run(audit_cmd)
 
-    # splits + prepare
     if args.stage in ("smoke", "prep", "e1"):
         split_max = max_args
         if args.stage == "smoke" and not args.max_images:
@@ -100,7 +149,6 @@ def main() -> None:
         train_cmd += ["--epochs", "2", "--batch", "8"]
     run(train_cmd)
 
-    # Find latest run and evaluate (ROOT already on sys.path)
     from src.common import load_env
 
     env = load_env(args.env)

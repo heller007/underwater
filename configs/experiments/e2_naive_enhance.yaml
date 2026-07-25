@@ -1,9 +1,10 @@
-# Placeholder configs for later stages (E2–E5). Not executed by Phase 1 runners.
 experiment_id: e2_naive_enhance
 stage: e2
-description: "Apply T1–T4 at test time on E1 raw detector (no retraining)"
+description: "Apply T0–T4 at test time on frozen E1 raw detector (no retraining)"
 depends_on: e1_baseline
 actions: [T0, T1, T2, T3, T4]
 held_out_site: Lokrum
 seed: 0
-status: scaffolded
+splits: [val, test]
+# Set on CLI: --weights /kaggle/working/runs/.../train/weights/best.pt
+status: ready
