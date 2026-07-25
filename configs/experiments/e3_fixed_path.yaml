@@ -1,8 +1,16 @@
 experiment_id: e3_fixed_path
 stage: e3
-description: "Train one detector per shortlisted action consistently"
-depends_on: e1_baseline
-actions: [T0, T1, T2, T3, T4]
+description: "Train one detector per shortlisted action (from E2: T0, T2, T4)"
+depends_on: e2_naive_enhance
+# Shortlist: raw + best two on Lokrum test from E2
+actions: [T0, T2, T4]
 held_out_site: Lokrum
 seed: 0
-status: scaffolded
+detector:
+  config: configs/detector/yolov8n_raw.yaml
+  epochs: 100
+  patience: 20
+  batch: 32
+  imgsz: 640
+# Pass --reuse-t0-weights to skip retraining raw
+status: ready

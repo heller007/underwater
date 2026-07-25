@@ -7,6 +7,7 @@ Stages:
   prep   - audit + splits + yolo prepare
   e1     - prep (if needed) + full baseline train + eval
   e2     - naive test-time enhancement on frozen E1 weights
+  e3     - fixed-path train/eval for shortlisted actions (T0/T2/T4)
 """
 
 from __future__ import annotations
@@ -48,7 +49,7 @@ def _latest_e1_weights(runs_root: Path, site: str) -> Path | None:
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--stage", choices=["smoke", "prep", "e1", "e2"], required=True)
+    p.add_argument("--stage", choices=["smoke", "prep", "e1", "e2", "e3"], required=True)
     p.add_argument("--env", default=None)
     p.add_argument("--seaclear-root", default=None)
     p.add_argument("--held-out-site", default="Lokrum")
@@ -58,9 +59,12 @@ def main() -> None:
     p.add_argument(
         "--weights",
         default=None,
-        help="For e2: path to E1 best.pt (auto-discovers latest e1 run if omitted)",
+        help="For e2/e3: path to E1 best.pt",
     )
     p.add_argument("--drop-enhanced", action="store_true")
+    p.add_argument("--actions", default=None, help="For e3: e.g. T2,T4 or T0,T2,T4")
+    p.add_argument("--epochs", type=int, default=None)
+    p.add_argument("--batch", type=int, default=None)
     args = p.parse_args()
 
     py = sys.executable
@@ -68,6 +72,56 @@ def main() -> None:
     sc_args = ["--seaclear-root", args.seaclear_root] if args.seaclear_root else []
     site_args = ["--held-out-site", args.held_out_site]
     max_args = ["--max-images", str(args.max_images)] if args.max_images else []
+
+    # ---- E3 fixed-path ----
+    if args.stage == "e3":
+        from src.common import load_env
+
+        env = load_env(args.env)
+        weights = Path(args.weights) if args.weights else _latest_e1_weights(
+            env.runs_root, args.held_out_site
+        )
+        yolo = env.processed_root / f"yolo_loso_{args.held_out_site.lower()}" / "data.yaml"
+        if not yolo.exists():
+            print("YOLO data missing; running prep first...", flush=True)
+            run(
+                [
+                    py,
+                    "scripts/run_stage.py",
+                    "--stage",
+                    "prep",
+                    *env_args,
+                    *sc_args,
+                    *site_args,
+                ]
+            )
+        cmd = [
+            py,
+            "scripts/run_fixed_path.py",
+            *env_args,
+            *site_args,
+        ]
+        if weights and Path(weights).exists():
+            cmd += ["--reuse-t0-weights", str(weights)]
+            # metrics may sit next to uploaded weights dataset
+            metrics_guess = Path(weights).parent.parent.parent / "train" / "eval" / "metrics_all.json"
+            if not metrics_guess.exists():
+                metrics_guess = Path(weights).parents[2] / "eval" / "metrics_all.json"
+            if metrics_guess.exists():
+                cmd += ["--reuse-t0-metrics", str(metrics_guess)]
+        if args.actions:
+            cmd += ["--actions", args.actions]
+        if args.device:
+            cmd += ["--device", args.device]
+        if args.epochs is not None:
+            cmd += ["--epochs", str(args.epochs)]
+        if args.batch is not None:
+            cmd += ["--batch", str(args.batch)]
+        if args.drop_enhanced:
+            cmd += ["--drop-enhanced"]
+        run(cmd)
+        print("E3 complete.")
+        return
 
     # ---- E2 only (no retraining) ----
     if args.stage == "e2":
