@@ -23,6 +23,7 @@ runs/**
 !runs/.gitkeep
 reports/**
 !reports/.gitkeep
+!reports/EXPERIMENT_LOG.md
 paper_assets/**
 !paper_assets/.gitkeep
 
